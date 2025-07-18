@@ -1,0 +1,32 @@
+<div class="pursuit-message">
+    {{#if (gt distance 0)}}
+        {{#unless (gt distance 10)}}
+            <h4>Round: {{round}}</h4>
+            <a class='chat-button' data-action="quarry">{{localize "PURSUIT.Quarry"}} {{#if skill}}({{skill}}){{/if}}</a>
+            <p>
+                {{#each quarry as |quarry q|}}
+                    <span>{{quarry.name}} ({{quarry.sl}})</span>
+                {{/each}}
+                {{#unless quarry.length}}
+                    <span>{{localize "PURSUIT.None"}}</span>
+                {{/unless}}
+            </p>
+            <h3 class="no-margin">{{localize "PURSUIT.Distance"}} {{distance}}</h3>
+            {{log pursuers}}
+            <p>
+                {{#each pursuers as |pursuer p|}}
+                    <span>{{pursuer.name}} ({{pursuer.sl}})</span>
+                {{/each}}
+                {{#unless pursuers.length}}
+                    <span>{{localize "PURSUIT.None"}}</span>
+                {{/unless}}
+            </p>
+            <a class='chat-button' data-action="pursuers">{{localize "PURSUIT.Pursuit"}} {{#if skill}}({{skill}}){{/if}}</a>
+            <a class='chat-button' data-action="calculateChase">{{localize "PURSUIT.NextRound"}}</a>
+        {{else}}
+            <h4>Quarry lost the pursuers!</h4>
+        {{/unless}}
+    {{else}}
+        <h4>Pursuers cough up with the quarry!</h4>
+    {{/if}}
+</div>

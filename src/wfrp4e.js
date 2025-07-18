@@ -108,6 +108,7 @@ import { XPMessageModel } from "./model/message/xp.js";
 import { CorruptionMessageModel } from "./model/message/corruption.js";
 import { PsychMessageModel } from "./model/message/psych.js";
 import {NODE_ENV} from 'process.env';
+import {PursuitMessageModel} from "./model/message/pursuit.js";
 
 /* -------------------------------------------- */
 /*  Foundry VTT Initialization                  */
@@ -195,6 +196,7 @@ Hooks.once("init", function () {
   CONFIG.ChatMessage.dataModels["xp"] = XPMessageModel;
   CONFIG.ChatMessage.dataModels["corruption"] = CorruptionMessageModel;
   CONFIG.ChatMessage.dataModels["psych"] = PsychMessageModel;
+  CONFIG.ChatMessage.dataModels["pursuit"] = PursuitMessageModel;
 
   game.wfrp4e = {
     apps: {

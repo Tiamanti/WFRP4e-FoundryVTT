@@ -28,7 +28,7 @@ export class CreditMessageModel extends WarhammerMessageModel {
       //If the user isnt a GM, they pay
       if (!game.user.isGM) 
       {
-          ui.notifications.error("MARKET.CreditCommandNotAllowed", {localize : true});
+          ui.notifications.error("MARKET.GMOnlyCommand", {localize : true});
       } 
       else // If GM
       {

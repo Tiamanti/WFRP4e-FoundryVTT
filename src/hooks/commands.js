@@ -9,6 +9,7 @@ import { PayMessageModel } from "../model/message/pay.js";
 import { XPMessageModel } from "../model/message/xp.js";
 import WFRP_Tables from "../system/tables-wfrp4e.js";
 import WFRP_Utility from "../system/utility-wfrp4e.js";
+import {PursuitMessageModel} from "../model/message/pursuit.js";
 
 
 export default function () {
@@ -147,6 +148,14 @@ export default function () {
         args : [],
         callback: () => {
           game.wfrp4e.trade.attemptBuy();
+        }
+      },
+      pursuit: {
+        description: "Prompt Pursuit Tool",
+        args: ["distance", "type", "skill", "fallback"],
+        defaultArg: "distance",
+        callback: (distance, type, skill, fallback) =>  {
+          PursuitMessageModel.handlePursuitCommand(distance, type, skill, fallback)
         }
       }
     })

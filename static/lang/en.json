@@ -1111,7 +1111,7 @@
     "MARKET.CreditCommand" : "Credit Response",
     "MARKET.CreditRequest" : "Reward",
     "MARKET.d": "d",
-    "MARKET.CreditCommandNotAllowed" : "Only GMs are allowed to use this command.",
+    "MARKET.GMOnlyCommand" : "Only GMs are allowed to use this command.",
     "MARKET.PaidBy" : "Paid by:",
     "MARKET.PaidFor": "<b>Purchased product:</b> {product}",
     "MARKET.For": "for",
@@ -1134,6 +1134,13 @@
     "MARKET.NotifyUserMustBePlayer": "Must be a player to click on PAY",
     "MARKET.ItemAdded" : "{item} added to {actor}",
     "Post Quantity" : "Post Quantity",
+
+    "PURSUIT.Quarry": "Quarry",
+    "PURSUIT.Pursuit": "Pursuit",
+    "PURSUIT.NextRound": "Next round",
+    "PURSUIT.NoTarget": "Action  requires a target",
+    "PURSUIT.None": "No one participating",
+    "PURSUIT.Distance": "Distance",
 
     "WFRP4E.TrappingType.Weapon" : "Weapons",
     "WFRP4E.TrappingType.Armour" : "Armour",
@@ -1579,6 +1586,7 @@
     "ERROR.VehicleTraitsOnStandard" : "Cannot add Vehicle Traits to this Actor",
     "ERROR.NoAvailableActors" : "No available owned Actors to choose!",
     "ERROR.SkillAlreadyExists" : "A Skill with this name already exists on this Actor",
+    "ERROR.Distance": "Distance value must be a number greater then 0",
 
     "Item Properties": "Item Properties",
     "PROPERTY.Group" : "Group",

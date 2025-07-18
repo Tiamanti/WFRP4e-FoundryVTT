@@ -169,3 +169,23 @@ e.g. `/command 100 someArg=value1 anotherArg=value2`
 `/trade`
 
 **Arguments**: None
+
+---
+
+### Prompt Pursuit Tool
+
+`/pursuit`
+
+**Arguments**: distance, type, skill, fallback
+
+**Default Argument**: distance
+
+**Notes**: Type is a type of pursuit. Allowed values are Simple (default) or Complex.
+Skill can be set to a specific skill, Any (prompts for a skill). Athletics is the default skill.
+Fallback means that if the character does not have the skill, Agility will be used instead. It's true by default.
+
+**Examples**:
+
+`/pursuit 4`
+
+`/pursuit 4 skill=Ride(Horse) fallback=false`
