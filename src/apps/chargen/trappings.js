@@ -3,22 +3,34 @@ import { ChargenStage } from "./stage.js";
 
 export class TrappingStage extends ChargenStage {
   journalId = "Compendium.wfrp4e-core.journals.JournalEntry.IQ0PgoJihQltCBUU.JournalEntryPage.hQipqLYlbBEjJEWL"
-  static get defaultOptions() {
-    const options = super.defaultOptions;
-    options.resizable = true;
-    options.width = 450;
-    options.height = 600;
-    options.classes.push("trappings");
-    options.minimizable = true;
-    options.title = game.i18n.localize("CHARGEN.StageTrappings");
-    return options;
-  }
+
+  static DEFAULT_OPTIONS = {
+    classes: ["trappings"],
+    position: {
+      width: 450,
+      height: 600
+    },
+    window: {
+      title: "CHARGEN.StageTrappings"
+    },
+    actions: {
+      rollIncome: function (ev) { return this.onRollIncome(ev); },
+      removeTrapping: function (ev, target) {
+        let index = Number(target.dataset.index);
+        this.context.added.splice(index, 1)
+        this.render(true);
+      }
+    }
+  };
+
+  static PARTS = {
+    form: {
+      template: "systems/wfrp4e/templates/apps/chargen/trappings.hbs",
+      scrollable: [".chargen-content"]
+    }
+  };
 
   static get title() { return game.i18n.localize("CHARGEN.StageTrappings"); }
-
-  get template() {
-    return "systems/wfrp4e/templates/apps/chargen/trappings.hbs";
-  }
 
   constructor(...args) {
     super(...args);
@@ -43,8 +55,8 @@ export class TrappingStage extends ChargenStage {
     added: []
   };
 
-  async getData() {
-    let data = await super.getData();
+  async _prepareContext(options) {
+    let context = await super._prepareContext(options);
     this.context.class = await this.context.class;
     this.context.career = await this.context.career;
 
@@ -72,32 +84,7 @@ export class TrappingStage extends ChargenStage {
 
     this.context.class = this.context.class.filter(i => i);
     this.context.career = this.context.career.filter(i => i);
-    return data;
-  }
-
-  activateListeners(html) {
-    super.activateListeners(html);
-    const dragDrop = new foundry.applications.ux.DragDrop.implementation({
-      dropSelector: '.chargen-content',
-      permissions: { drop: () => true },
-      callbacks: { drop: this._onDrop.bind(this) },
-    });
-
-    dragDrop.bind(html[0]);
-
-    html.find(".missing-trapping-choice input").click(ev => {
-      let name = ev.currentTarget.name;
-      let index = Number(name.split("-")[1]);
-      this.context.missing[index].choice = ev.currentTarget.value;
-      this.render(true);
-    });
-
-    html.find(".remove-trapping").click(ev => {
-      let index = Number(ev.currentTarget.dataset.index);
-      this.context.added.splice(index, 1)
-      this.render(true);
-    })
-
+    return context;
   }
 
   async onRollIncome()
@@ -124,10 +111,26 @@ export class TrappingStage extends ChargenStage {
     return missing.concat(this.context.class, this.context.career, this.context.added);
   }
 
-  async _updateObject(ev, formData) {
-
+  async updateData(ev, formData) {
     this.data.items.trappings = await this.getItems();
     this.data.items.income = this.context.income.item;
-    super._updateObject(ev, formData)
+  }
+
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    const dragDrop = new foundry.applications.ux.DragDrop.implementation({
+      dropSelector: '.chargen-content',
+      permissions: { drop: () => true },
+      callbacks: { drop: this._onDrop.bind(this) },
+    });
+
+    dragDrop.bind(this.element);
+
+    this.element.querySelectorAll(".missing-trapping-choice input").forEach(el => el.addEventListener("change", ev => {
+      let name = ev.currentTarget.name;
+      let index = Number(name.split("-")[1]);
+      this.context.missing[index].choice = ev.currentTarget.value;
+      this.render(true);
+    }));
   }
 }

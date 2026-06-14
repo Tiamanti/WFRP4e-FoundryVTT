@@ -3,17 +3,30 @@ import { ChargenStage } from "./stage";
 
 export class SkillsTalentsStage extends ChargenStage {
   journalId = "Compendium.wfrp4e-core.journals.JournalEntry.IQ0PgoJihQltCBUU.JournalEntryPage.f5Y4XenZVtDU2GUo"
-  static get defaultOptions() {
-    const options = super.defaultOptions;
-    options.resizable = true;
-    options.width = 450;
-    options.height = 850;
-    options.classes.push("skills-talents");
-    options.minimizable = true;
-    options.cannotResubmit = true
-    options.title = game.i18n.localize("CHARGEN.StageSkillsTalents");
-    return options;
-  }
+
+  static cannotResubmit = true;
+
+  static DEFAULT_OPTIONS = {
+    classes: ["skills-talents"],
+    position: {
+      width: 450,
+      height: 850
+    },
+    window: {
+      title: "CHARGEN.StageSkillsTalents"
+    },
+    actions: {
+      rollRandomTalents: function (ev, target) { return this.rollRandomTalents(ev, target); },
+      rerollDuplicate: function (ev, target) { return this.rerollDuplicate(ev, target); }
+    }
+  };
+
+  static PARTS = {
+    form: {
+      template: "systems/wfrp4e/templates/apps/chargen/skills-talents.hbs",
+      scrollable: [".chargen-content"]
+    }
+  };
 
   static get title() { return game.i18n.localize("CHARGEN.StageSkillsTalents"); }
 
@@ -73,10 +86,6 @@ export class SkillsTalentsStage extends ChargenStage {
     this.context.speciesTraits = traits;
   }
 
-  get template() {
-    return "systems/wfrp4e/templates/apps/chargen/skills-talents.hbs";
-  }
-
   context = {
     speciesSkills: {},
     speciesTalents: {
@@ -90,10 +99,10 @@ export class SkillsTalentsStage extends ChargenStage {
     careerTalents: {},
   };
 
-  async getData() {
-    let data = await super.getData();
+  async _prepareContext(options) {
+    let context = await super._prepareContext(options);
 
-    data.speciesSkillAllocation = {
+    context.speciesSkillAllocation = {
       0: [],
       3: [],
       5: []
@@ -101,7 +110,7 @@ export class SkillsTalentsStage extends ChargenStage {
 
     /**#region species talents*/
 
-    data.talents = {
+    context.talents = {
       normal: this.context.speciesTalents.normal,
       random: this.#prepareRandomTalentData(),
       chosen: this.context.speciesTalents.chosen,
@@ -151,11 +160,11 @@ export class SkillsTalentsStage extends ChargenStage {
 
     // Sort into arrays
     for (let skill in this.context.speciesSkills) {
-      data.speciesSkillAllocation[this.context.speciesSkills[skill]].push(skill);
+      context.speciesSkillAllocation[this.context.speciesSkills[skill]].push(skill);
     }
 
     // This case happens when user chose to roll an additional random talent, then changed their mind. Remove the extra talents
-    for (let dataTable of data.talents.random) {
+    for (let dataTable of context.talents.random) {
       if (dataTable.left < 0) {
         let table = this.context.speciesTalents.randomTalents[dataTable.key];
         let spliceIndex = table.talents.length - Math.abs(dataTable.left)
@@ -165,12 +174,12 @@ export class SkillsTalentsStage extends ChargenStage {
       }
     }
 
-    data.careerSkills = this.context.careerSkills;
-    data.careerTalents = this.context.careerTalents;
-    data.traits = this.context.speciesTraits;
-    data.pointsAllocated = 40 - Object.values(this.context.careerSkills).reduce((prev, current) => prev + current, 0)
-    
-    return data;
+    context.careerSkills = this.context.careerSkills;
+    context.careerTalents = this.context.careerTalents;
+    context.traits = this.context.speciesTraits;
+    context.pointsAllocated = 40 - Object.values(this.context.careerSkills).reduce((prev, current) => prev + current, 0)
+
+    return context;
   }
 
   /**
@@ -215,7 +224,7 @@ export class SkillsTalentsStage extends ChargenStage {
     return Object.values(this.context.speciesTalents.randomTalents);
   }
 
-  async _updateObject(ev, formData) {
+  async updateData(ev, formData) {
     // Merge career/species skill advances into data
     for (let skill in this.context.speciesSkills) {
       if (isNaN(this.data.skillAdvances[skill]))
@@ -263,8 +272,6 @@ export class SkillsTalentsStage extends ChargenStage {
 
     this.data.items.talents = talents.filter(i => i);
     this.data.items.traits = traits.filter(i => i);
-    super._updateObject(ev, formData)
-
   }
 
   /**
@@ -282,7 +289,7 @@ export class SkillsTalentsStage extends ChargenStage {
   }
 
   async validate() {
-    let valid = super.validate();
+    let valid = await super.validate();
 
     if (!this.validateSkills())
       valid = false
@@ -327,60 +334,6 @@ export class SkillsTalentsStage extends ChargenStage {
   }
 
 
-
-  activateListeners(html) {
-    super.activateListeners(html);
-    const dragDrop = new foundry.applications.ux.DragDrop.implementation({
-      dragSelector: '.drag-skill',
-      dropSelector: '.drag-area',
-      permissions: { dragstart: () => true, drop: () => true },
-      callbacks: { drop: this.onDropSkill.bind(this), dragstart: this.onDragSkill.bind(this) },
-    });
-
-    dragDrop.bind(html[0]);
-
-
-    html.find(".talent-choice input").click(ev => {
-      let target = ev.currentTarget.name?.split("-")[1];
-
-      if (target == "career") {
-        for (let talent of this.data.items.career.system.talents) {
-          this.context.careerTalents[talent] = (talent == ev.currentTarget.value);
-        }
-      }
-      else {
-        this.context.speciesTalents.chosen[target] = ev.currentTarget.value;
-      }
-
-      this.render(true);
-
-    });
-
-    html.find(".career-skills input").change(ev => {
-      ev.currentTarget.value = Math.max(0, Number(ev.currentTarget.value))
-      if (ev.currentTarget.value > 10) {
-        ev.currentTarget.value = 0;
-        this.showError("CareerSkillAllocationBounds")
-      }
-      this.context.careerSkills[ev.currentTarget.dataset.skill] = Number(ev.currentTarget.value);
-      this.render(true);
-    });
-
-    html.find(".reroll-duplicate").click(async ev => {
-      ev.stopPropagation();
-      let index = Number(ev.currentTarget.dataset.index);
-      let key = ev.currentTarget.dataset.table;
-      let table = this.context.speciesTalents.randomTalents[key];
-
-      let talent = await game.wfrp4e.tables.rollTable(table.key);
-      talent = await this.checkTalentReplacement(talent.text);
-      table.talents[index] = talent;
-      this.updateMessage("RerolledDuplicateTalent", { rolled: talent })
-      this.render(true);
-    })
-  }
-
-
   onDropSkill(ev) {
     let skill = JSON.parse(ev.dataTransfer.getData("text/plain")).skill;
     this.context.speciesSkills[skill] = Number(ev.currentTarget.dataset.advance);
@@ -395,9 +348,9 @@ export class SkillsTalentsStage extends ChargenStage {
     ev.dataTransfer.setData("text/plain", JSON.stringify({ skill: ev.currentTarget.textContent.trim() }));
   }
 
-  async rollRandomTalents(ev) {
-    let number = Number(ev.currentTarget.dataset.number) || 0;
-    let key = ev.currentTarget.dataset.table || "talents";
+  async rollRandomTalents(ev, target) {
+    let number = Number(target.dataset.number) || 0;
+    let key = target.dataset.table || "talents";
     let table = this.context.speciesTalents.randomTalents[key];
     if (!table) return;
 
@@ -409,6 +362,19 @@ export class SkillsTalentsStage extends ChargenStage {
 
     table.rolled = true;
     this.updateMessage("Rolled", { rolled: table.talents.join(", ") })
+    this.render(true);
+  }
+
+  async rerollDuplicate(ev, target) {
+    ev.stopPropagation();
+    let index = Number(target.dataset.index);
+    let key = target.dataset.table;
+    let table = this.context.speciesTalents.randomTalents[key];
+
+    let talent = await game.wfrp4e.tables.rollTable(table.key);
+    talent = await this.checkTalentReplacement(talent.text);
+    table.talents[index] = talent;
+    this.updateMessage("RerolledDuplicateTalent", { rolled: talent })
     this.render(true);
   }
 
@@ -426,5 +392,43 @@ export class SkillsTalentsStage extends ChargenStage {
     }
 
     return talent
+  }
+
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    const dragDrop = new foundry.applications.ux.DragDrop.implementation({
+      dragSelector: '.drag-skill',
+      dropSelector: '.drag-area',
+      permissions: { dragstart: () => true, drop: () => true },
+      callbacks: { drop: this.onDropSkill.bind(this), dragstart: this.onDragSkill.bind(this) },
+    });
+
+    dragDrop.bind(this.element);
+
+
+    this.element.querySelectorAll(".talent-choice input").forEach(el => el.addEventListener("change", ev => {
+      let target = ev.currentTarget.name?.split("-")[1];
+
+      if (target == "career") {
+        for (let talent of this.data.items.career.system.talents) {
+          this.context.careerTalents[talent] = (talent == ev.currentTarget.value);
+        }
+      }
+      else {
+        this.context.speciesTalents.chosen[target] = ev.currentTarget.value;
+      }
+
+      this.render(true);
+    }));
+
+    this.element.querySelectorAll(".career-skills input").forEach(el => el.addEventListener("change", ev => {
+      ev.currentTarget.value = Math.max(0, Number(ev.currentTarget.value))
+      if (ev.currentTarget.value > 10) {
+        ev.currentTarget.value = 0;
+        this.showError("CareerSkillAllocationBounds")
+      }
+      this.context.careerSkills[ev.currentTarget.dataset.skill] = Number(ev.currentTarget.value);
+      this.render(true);
+    }));
   }
 }
