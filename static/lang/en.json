@@ -2607,6 +2607,12 @@
                     "size" : {
                         "label" : "Size"
                     },
+                    "careerTable" : {
+                        "label" : "Career Table"
+                    },
+                    "age" : {
+                        "label" : "Age"
+                    },
                     "talents" : {
                         "random" : {
                             "label" : "Random"

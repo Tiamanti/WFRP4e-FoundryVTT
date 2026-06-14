@@ -39,14 +39,9 @@
 
     {{> nameListInput label="Skills" list=system.skills.list path="system.skills"}}
 
-    {{> choiceDisplay label="Talents" path="talents.choices" display=system.talents.choices.textDisplay}}
-    <div class="flexrow talent" style="gap: 0.5rem">
-        {{formGroup fields.talents.fields.random value=source.system.talents.random classes="talent-number"}}
-        {{> documentReference label="Table" document=system.talents.table}}
-    </div>
-
-
-
+    {{> nameListInput label="Mandatory Talents" list=system.talents.mandatory.list path="system.talents.mandatory"}}
+    {{> nameListInput label="Talent Choices" list=system.talents.choices.list path="system.talents.choices"}}
+    {{> nameListInput label="Traits" list=system.traits.list path="system.traits"}}
 
     {{formGroup fields.movement value=source.system.movement}}
     {{formGroup fields.fate value=source.system.fate}}
@@ -54,5 +49,7 @@
     {{formGroup fields.extra value=source.system.extra}}
 
     {{formGroup fields.size value=source.system.size}}
-    {{> documentReference label="Career Table" document=system.careers}}
+
+    {{formGroup fields.careerTable value=source.system.careerTable}}
+    {{formGroup fields.age value=source.system.age}}
 </section>

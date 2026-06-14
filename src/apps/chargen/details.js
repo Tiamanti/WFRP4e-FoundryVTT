@@ -1,5 +1,6 @@
 import NameGenWfrp from "../name-gen.js";
 import { ChargenStage } from "./stage";
+import WFRP_Utility from "../../system/utility-wfrp4e.js";
 
 export class DetailsStage extends ChargenStage {
   journalId = "Compendium.wfrp4e-core.journals.JournalEntry.IQ0PgoJihQltCBUU.JournalEntryPage.Q4C9uANCqPzlRKFD"
@@ -63,12 +64,13 @@ export class DetailsStage extends ChargenStage {
     return NameGenWfrp.generateName({ species: this.data.species, gender: this.context.gender });
   }
   async rollAge() {
-    return (await new Roll(game.wfrp4e.config.speciesAge[this.data.species]).roll({allowInteractive : false})).total;
+    return (await new Roll(WFRP_Utility.speciesAge(this.data.species, this.data.subspecies)).roll({allowInteractive : false})).total;
   }
   async rollHeight() {
-    let heightRoll = (await new Roll(game.wfrp4e.config.speciesHeight[this.data.species].die).roll({allowInteractive : false})).total;
-    let hFeet = game.wfrp4e.config.speciesHeight[this.data.species].feet;
-    let hInches = game.wfrp4e.config.speciesHeight[this.data.species].inches + heightRoll;
+    let height = WFRP_Utility.speciesHeight(this.data.species, this.data.subspecies);
+    let heightRoll = (await new Roll(height.die).roll({allowInteractive : false})).total;
+    let hFeet = height.feet;
+    let hInches = height.inches + heightRoll;
     hFeet += Math.floor(hInches / 12);
     hInches = hInches % 12;
     return `${hFeet}'${hInches}`;

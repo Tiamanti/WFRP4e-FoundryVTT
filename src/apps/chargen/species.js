@@ -78,11 +78,11 @@ export class SpeciesStage extends ChargenStage {
 
     if (this.context.species) {
       context.preview = {
-        characteristics: game.wfrp4e.config.subspecies[this.context.species]?.[this.context.subspecies]?.characteristics ?? game.wfrp4e.config.speciesCharacteristics[this.context.species],
-        movement: game.wfrp4e.config.subspecies[this.context.species]?.[this.context.subspecies]?.movement ?? game.wfrp4e.config.speciesMovement[this.context.species],
-        fate: game.wfrp4e.config.subspecies[this.context.species]?.[this.context.subspecies]?.fate ?? game.wfrp4e.config.speciesFate[this.context.species],
-        resilience: game.wfrp4e.config.subspecies[this.context.species]?.[this.context.subspecies]?.resilience ?? game.wfrp4e.config.speciesRes[this.context.species],
-        extra: game.wfrp4e.config.subspecies[this.context.species]?.[this.context.subspecies]?.extra ?? game.wfrp4e.config.speciesExtra[this.context.species],
+        characteristics: WFRP_Utility.speciesCharacteristicFormulae(this.context.species, this.context.subspecies),
+        movement: WFRP_Utility.speciesMovement(this.context.species, this.context.subspecies),
+        fate: WFRP_Utility.speciesFate(this.context.species, this.context.subspecies),
+        resilience: WFRP_Utility.speciesResilience(this.context.species, this.context.subspecies),
+        extra: WFRP_Utility.speciesExtra(this.context.species, this.context.subspecies),
         ...WFRP_Utility.speciesSkillsTalents(this.context.species, this.context.subspecies)
       }
 

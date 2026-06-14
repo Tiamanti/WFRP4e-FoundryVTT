@@ -283,6 +283,11 @@ export default class CharGenWfrp4e extends HandlebarsApplicationMixin(Applicatio
       this.actor.system.details.species.value = this.data.species
       this.actor.system.details.species.subspecies = this.data.subspecies
 
+      // Attach the singleton Species item (subspecies item if chosen, else species)
+      let speciesItem = WFRP_Utility.getSpeciesItem(this.data.subspecies || this.data.species)
+      if (speciesItem)
+        this.actor.items = this.actor.items.concat(speciesItem.toObject())
+
       for(let exp in this.data.exp)
       {
         if (Number.isNumeric(this.data.exp[exp]))

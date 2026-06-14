@@ -34,18 +34,4 @@ export default class SpeciesSheet extends BaseWFRP4eItemSheet
       this.document.update(this.document.system.skills.add(item.name));
     }
   }
-
-  async  _onDropRollTable(data, ev)
-  {
-    let table = await RollTable.implementation.fromDropData(data);
-    if (ev.target.closest(".talent"))
-    {
-      this.document.update({"system.talents" : this.document.system.talents.table.set(table)});
-      
-    }
-    else 
-    {
-      this.document.update(this.document.system.careers.set(table));
-    }
-  }
 }

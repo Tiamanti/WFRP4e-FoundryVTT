@@ -13,22 +13,59 @@ import { XPMessageModel } from "../model/message/xp.js";
  *
  */
 export default class WFRP_Utility {
+  // Keys already reported as missing, so the fallback log fires once per key
+  static _speciesFallbackLogged = new Set();
+
+  /**
+   * Find the Species item for a species/subspecies key (matched via system.keys).
+   * Searches world items; returns null if none, so callers fall back to config.species*.
+   *
+   * @param {string} key species or subspecies key
+   */
+  static getSpeciesItem(key) {
+    if (!key) return null;
+    let item = game.items.find(i => i.type == "species" && i.system.keys?.includes(key)) || null;
+    if (!item && !this._speciesFallbackLogged.has(key)) {
+      this._speciesFallbackLogged.add(key);
+      // Debug-gated (enable with CONFIG.debug.warhammer = true): no Species item, using config.species*
+      warhammer.utility.log(`No Species item found for "${key}" — falling back to config.species*`, false);
+    }
+    return item;
+  }
+
+  /**
+   * Characteristic formula map ({ws: "2d10+20", ...}) for a species/subspecies.
+   * Prefers the Species item (rebuilding "Xd10+base" from {dice, base}); falls back to config.
+   */
+  static speciesCharacteristicFormulae(species, subspecies) {
+    let item = this.getSpeciesItem(subspecies || species);
+    if (item) {
+      let formulae = {};
+      for (let [char, value] of Object.entries(item.system.characteristics)) {
+        formulae[char] = `${value.dice}d10+${value.base}`;
+      }
+      return formulae;
+    }
+    let formulae = game.wfrp4e.config.speciesCharacteristics[species];
+    if (subspecies && game.wfrp4e.config.subspecies[species]?.[subspecies]?.characteristics)
+      formulae = game.wfrp4e.config.subspecies[species][subspecies].characteristics;
+    return formulae;
+  }
+
   /**
    * Roll characteristics given a species, or take average depending input
-   * 
+   *
    * @param {string} species      Key or value for species in config
    * @param {bool} average        Take average or not
    */
   static async  speciesCharacteristics(species, average, subspecies) {
     let characteristics = {};
-    let characteristicFormulae = game.wfrp4e.config.speciesCharacteristics[species];
-    if (subspecies && game.wfrp4e.config.subspecies[species][subspecies].characteristics)
-      characteristicFormulae = game.wfrp4e.config.subspecies[species][subspecies].characteristics
+    let characteristicFormulae = this.speciesCharacteristicFormulae(species, subspecies);
 
     if (!characteristicFormulae) {
       ui.notifications.info(`${game.i18n.format("ERROR.Species", { name: species })}`)
-      warhammer.utility.log("Could not find species " + species + ": " + error, true);
-      throw error
+      warhammer.utility.log("Could not find species " + species, true);
+      throw new Error("Could not find species " + species)
     }
 
 
@@ -47,6 +84,26 @@ export default class WFRP_Utility {
 
 
   static speciesSkillsTalents(species, subspecies) {
+    // Prefer the Species item (subspecies items carry fully-merged data)
+    let item = this.getSpeciesItem(subspecies || species);
+    if (item) {
+      let sys = item.system;
+      let talents = [...(sys.talents.mandatory?.list || []), ...(sys.talents.choices?.list || [])];
+      let randomTalents = {};
+      for (let entry of (sys.talents.random || [])) randomTalents[entry.table] = entry.count;
+      if (foundry.utils.isEmpty(randomTalents)) randomTalents = { talents: 0 };
+      let talentReplacement = {};
+      for (let entry of (sys.talents.replacement || [])) talentReplacement[entry.from] = entry.to;
+      return {
+        skills: sys.skills?.list || [],
+        talents,
+        randomTalents,
+        talentReplacement,
+        traits: sys.traits?.list || []
+      };
+    }
+
+    // config fallback
     let skills, talents, randomTalents, talentReplacement, traits;
 
     skills = game.wfrp4e.config.speciesSkills[species];
@@ -76,15 +133,48 @@ export default class WFRP_Utility {
   }
 
   /**
-   * Retrieves species movement value from config.
-   * 
+   * Retrieves species movement value, preferring the Species item.
+   *
    * @param {String} species  species key for lookup
    */
   static speciesMovement(species, subspecies) {
+    let item = this.getSpeciesItem(subspecies || species);
+    if (item) return item.system.movement;
     let move = game.wfrp4e.config.speciesMovement[species];
-    if (subspecies && game.wfrp4e.config.subspecies[species].movement)
-      move = game.wfrp4e.config.subspecies[species].movement
+    if (subspecies && game.wfrp4e.config.subspecies[species]?.[subspecies]?.movement)
+      move = game.wfrp4e.config.subspecies[species][subspecies].movement
     return move;
+  }
+
+  // Species meta stats, preferring the Species item, falling back to config.
+  static speciesFate(species, subspecies) {
+    let item = this.getSpeciesItem(subspecies || species);
+    if (item) return item.system.fate;
+    return (subspecies && game.wfrp4e.config.subspecies[species]?.[subspecies]?.fate) ?? game.wfrp4e.config.speciesFate[species];
+  }
+
+  static speciesResilience(species, subspecies) {
+    let item = this.getSpeciesItem(subspecies || species);
+    if (item) return item.system.resilience;
+    return (subspecies && game.wfrp4e.config.subspecies[species]?.[subspecies]?.resilience) ?? game.wfrp4e.config.speciesRes[species];
+  }
+
+  static speciesExtra(species, subspecies) {
+    let item = this.getSpeciesItem(subspecies || species);
+    if (item) return item.system.extra;
+    return (subspecies && game.wfrp4e.config.subspecies[species]?.[subspecies]?.extra) ?? game.wfrp4e.config.speciesExtra[species];
+  }
+
+  static speciesAge(species, subspecies) {
+    let item = this.getSpeciesItem(subspecies || species);
+    if (item && item.system.age) return item.system.age;
+    return game.wfrp4e.config.speciesAge[species];
+  }
+
+  static speciesHeight(species, subspecies) {
+    let item = this.getSpeciesItem(subspecies || species);
+    if (item && item.system.height?.die) return item.system.height;
+    return game.wfrp4e.config.speciesHeight[species];
   }
 
   static getSystemEffects(vehicle=false) {
