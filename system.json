@@ -74,6 +74,7 @@
       "prayer" : {"htmlFields": ["description.value", "gmdescription.value"]},
       "psychology" : {"htmlFields": ["description.value", "gmdescription.value"]},
       "skill" : {"htmlFields": ["description.value", "gmdescription.value"]},
+      "species" : {"htmlFields": ["description.value", "gmdescription.value"]},
       "spell" : {"htmlFields": ["description.value", "gmdescription.value"]},
       "talent" : {"htmlFields": ["description.value", "gmdescription.value"]},
       "trait" : {"htmlFields": ["description.value", "gmdescription.value"]},
