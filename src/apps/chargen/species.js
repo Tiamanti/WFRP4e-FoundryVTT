@@ -5,24 +5,37 @@ export class SpeciesStage extends ChargenStage {
 
   journalId = "Compendium.wfrp4e-core.journals.JournalEntry.IQ0PgoJihQltCBUU.JournalEntryPage.l0f11ypRjH9sR48Q"
 
-  static get defaultOptions() {
-    const options = super.defaultOptions;
-    options.resizable = true;
-    options.width = 450;
-    options.height = 550;
-    options.classes.push("species");
-    options.minimizable = true;
-    options.title = game.i18n.localize("CHARGEN.StageSpecies");
-    return options;
-  }
+  static DEFAULT_OPTIONS = {
+    classes: ["species"],
+    position: {
+      width: 340,
+      height: 650
+    },
+    window: {
+      title: "CHARGEN.StageSpecies"
+    },
+    actions: {
+      rollSpecies: function (ev) { return this.onRollSpecies(ev); },
+      selectSpecies: function (ev, target) {
+        this.context.exp = 0;
+        this.context.choose = target.dataset.species;
+        this.updateMessage("Chosen", { chosen: game.wfrp4e.config.species[this.context.choose] });
+        this.setSpecies(this.context.choose);
+      },
+      selectSubspecies: function (ev, target) {
+        this.setSpecies(this.context.species, target.dataset.subspecies);
+      }
+    }
+  };
+
+  static PARTS = {
+    form: {
+      template: "systems/wfrp4e/templates/apps/chargen/species.hbs",
+      scrollable: [".chargen-content"]
+    }
+  };
 
   static get title() { return game.i18n.localize("CHARGEN.StageSpecies"); }
-
-
-  get template() {
-    return "systems/wfrp4e/templates/apps/chargen/species.hbs";
-  }
-
 
   context = {
     species: "",
@@ -31,10 +44,8 @@ export class SpeciesStage extends ChargenStage {
   };
 
 
-  async getData() {
-    let data = await super.getData();
-
-    data.context = this.context;
+  async _prepareContext(options) {
+    let context = await super._prepareContext(options);
 
     let speciesTable = game.wfrp4e.tables.findTable("species");
 
@@ -44,29 +55,29 @@ export class SpeciesStage extends ChargenStage {
       throw new Error (game.i18n.localize("CHARGEN.ERROR.SpeciesTable"))
     }
 
-    data.species = {}
+    context.species = {}
 
     for (let result of speciesTable.results)
     {
       let speciesKey = warhammer.utility.findKey(result.name, game.wfrp4e.config.species)
       if (speciesKey)
       {
-        data.species[speciesKey] = result.name
+        context.species[speciesKey] = result.name
       }
     }
 
-    data.speciesDisplay = game.wfrp4e.config.species[this.context.species];
+    context.speciesDisplay = game.wfrp4e.config.species[this.context.species];
 
     if (this.context.species && game.wfrp4e.config.subspecies[this.context.species]) {
-      data.subspeciesChoices = game.wfrp4e.config.subspecies[this.context.species];
+      context.subspeciesChoices = game.wfrp4e.config.subspecies[this.context.species];
     }
 
     if (this.context.subspecies) {
-      data.speciesDisplay += ` (${game.wfrp4e.config.subspecies[this.context.species][this.context.subspecies]?.name})`;
+      context.speciesDisplay += ` (${game.wfrp4e.config.subspecies[this.context.species][this.context.subspecies]?.name})`;
     }
 
     if (this.context.species) {
-      data.preview = {
+      context.preview = {
         characteristics: game.wfrp4e.config.subspecies[this.context.species]?.[this.context.subspecies]?.characteristics ?? game.wfrp4e.config.speciesCharacteristics[this.context.species],
         movement: game.wfrp4e.config.subspecies[this.context.species]?.[this.context.subspecies]?.movement ?? game.wfrp4e.config.speciesMovement[this.context.species],
         fate: game.wfrp4e.config.subspecies[this.context.species]?.[this.context.subspecies]?.fate ?? game.wfrp4e.config.speciesFate[this.context.species],
@@ -75,19 +86,19 @@ export class SpeciesStage extends ChargenStage {
         ...WFRP_Utility.speciesSkillsTalents(this.context.species, this.context.subspecies)
       }
 
-      for (let i in data.preview.talents) {
-        if (Number.isNumeric(data.preview.talents[i])) {
-          data.preview.randomTalents.talents = Number(data.preview.talents[i]);
+      for (let i in context.preview.talents) {
+        if (Number.isNumeric(context.preview.talents[i])) {
+          context.preview.randomTalents.talents = Number(context.preview.talents[i]);
         }
       }
 
       const or = game.i18n.localize("SkillsOr");
-      data.preview.talents = data.preview.talents.filter(t => !Number.isNumeric(t)).map(t => t.replace(', ', ` <em>${or}</em> `));
-      data.preview.skills = data.preview.skills.map(t => t.replace(', ', ' <em>or</em> '));
+      context.preview.talents = context.preview.talents.filter(t => !Number.isNumeric(t)).map(t => t.replace(', ', ` <em>${or}</em> `));
+      context.preview.skills = context.preview.skills.map(t => t.replace(', ', ' <em>or</em> '));
 
       let talents = [];
 
-      for (let [key, value] of Object.entries(data.preview.randomTalents)) {
+      for (let [key, value] of Object.entries(context.preview.randomTalents)) {
         let table = game.wfrp4e.tables.findTable(key);
 
         talents.push({
@@ -96,40 +107,29 @@ export class SpeciesStage extends ChargenStage {
         });
       }
 
-      data.preview.randomTalents = talents;
+      context.preview.randomTalents = talents;
     }
 
     if (game.wfrp4e.config.extraSpecies.length)
     {
-      data.extraSpecies = game.wfrp4e.config.extraSpecies.reduce((extra, species) => {
+      context.extraSpecies = game.wfrp4e.config.extraSpecies.reduce((extra, species) => {
         extra[species] = game.wfrp4e.config.species[species];
         return extra;
       }, {})
     }
 
-    return data;
+    return context;
   }
 
 
   async validate() {
-    let valid = super.validate();
+    let valid = await super.validate();
     if (!this.context.species)
     {
       this.showError("SpeciesSubmit")
       valid = false
     }
-    return valid
-  }
-
-
-  /**
-   * The user is allowed to freely click and choose species, but can only roll for it one time.
-   * After species is rolled, user can click and choose a different species, but cannot go back and roll again
-   */
-  activateListeners(html) {
-    super.activateListeners(html);
-    html.on("click", '.species-select', this.onSelectSpecies.bind(this));
-    html.on("click", '.subspecies-select', this.onSelectSubspecies.bind(this));
+    return valid;
   }
 
 
@@ -140,29 +140,14 @@ export class SpeciesStage extends ChargenStage {
     this.context.roll = await game.wfrp4e.tables.rollTable("species");
     this.context.choose = false;
     this.updateMessage("Rolled", {rolled : this.context.roll.name})
-    this.setSpecies(findKey(this.context.roll.name, game.wfrp4e.config.species));
-  }
-
-  // Set chosen species, but don't unset "roll" (prevents users from rolling again after they've rolled once)
-  onSelectSpecies(event) {
-    this.context.exp = 0;
-    this.context.choose = event.currentTarget.dataset.species;
-    this.updateMessage("Chosen", {chosen : game.wfrp4e.config.species[this.context.choose]})
-    this.setSpecies(this.context.choose);
+    this.setSpecies(warhammer.utility.findKey(this.context.roll.name, game.wfrp4e.config.species));
   }
 
 
-  onSelectSubspecies(event) {
-    this.setSpecies(this.context.species, event.currentTarget.dataset.subspecies);
-  }
-
-
-  _updateObject(event, formData) {
+  async updateData(event, formData) {
     this.data.species = this.context.species;
     this.data.subspecies = this.context.subspecies;
     this.data.exp.species = this.context.exp;
-    super._updateObject(event, formData)
-
   }
 
 
@@ -175,5 +160,14 @@ export class SpeciesStage extends ChargenStage {
       this.context.subspecies = "";
     }
     this.render(true);
+  }
+
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    // Single Species column before selection; expand to four columns after
+    let targetWidth = this.context.species ? 1000 : 340;
+    if (this.position.width !== targetWidth) {
+      this.setPosition({ width: targetWidth });
+    }
   }
 }

@@ -1,102 +1,117 @@
 import WFRP_Utility from "../../system/utility-wfrp4e.js";
 
+/**
+ * Base class for an individual character generation stage (species, career, etc.)
+ * Migrated from V1 FormApplication to ApplicationV2.
+ */
+export class ChargenStage extends HandlebarsApplicationMixin(ApplicationV2) {
 
+  // Stages that may only be submitted once (e.g. skills & talents). Subclass overrides.
+  static cannotResubmit = false;
 
-export class ChargenStage extends FormApplication {
-  active = false;
-  html = "";
-  data = {};
+  journalId = "";
   context = {};
-  journalId = ""
 
-  static get defaultOptions() {
-    const options = super.defaultOptions;
-    options.resizable = true;
-    options.id = "chargen-stage";
-    options.classes = options.classes.concat("wfrp4e", "chargen");
-    options.width = 1000;
-    options.height = 600;
-    options.minimizable = true;
-    options.title = game.i18n.localize("CHARGEN.Title");
-    options.scrollY = [".chargen-content"]
-    options.cannotResubmit = false;
-    return options;
-  }
-
-  
-  _getHeaderButtons() {
-    let buttons = super._getHeaderButtons();
-      buttons.unshift(
+  static DEFAULT_OPTIONS = {
+    tag: "form",
+    classes: ["wfrp4e", "chargen"],
+    window: {
+      resizable: true,
+      minimizable: true,
+      title: "CHARGEN.Title",
+      controls: [
         {
-          class: "help",
           icon: "fa-solid fa-circle-question",
-          onclick: async ev => this.renderJournalPage()
-        })
-    return buttons
-  }
-
-  async renderJournalPage()
-  {
-    let journalPage = await fromUuid(this.journalId)
-
-    if (journalPage)
-    {
-      await journalPage.parent.sheet._render(true)
-      journalPage.parent.sheet.goToPage(journalPage.id)
+          label: "CHARGEN.Help",
+          action: "chargenHelp"
+        }
+      ]
+    },
+    position: {
+      width: 1000,
+      height: 600
+    },
+    form: {
+      handler: this._onSubmitForm,
+      submitOnChange: false,
+      closeOnSubmit: false
+    },
+    actions: {
+      chargenHelp: function () { return this.renderJournalPage(); },
+      itemLookup: this._onItemLookup
     }
+  };
+
+  /**
+   * @param {object} data    Shared CharGen data object (this.data of the orchestrator)
+   * @param {object} options Application options. Custom keys: complete (callback), index, message
+   */
+  constructor(data, options = {}) {
+    super(options);
+    this.data = data;
+    this.completeCallback = options.complete;
+    this.stageIndex = options.index;
+    this.message = options.message;
   }
 
-  constructor(object, options) {
-    super(object, options);
-    this.data = object;
+  async _prepareContext(options) {
+    let context = await super._prepareContext(options);
+    context.data = this.data;
+    context.context = this.context;
+    return context;
   }
 
-  async getData() {
-    return { data: this.data, context: this.context };
+  /**
+   * Form submission. Validates, lets the subclass write its data into the shared
+   * object, marks the stage complete, and closes the stage window.
+   */
+  static async _onSubmitForm(event, form, formData) {
+    if (!(await this.validate())) {
+      return;
+    }
+    this.isCompleted = true;
+    await this.updateData(event, formData.object);
+    this.completeCallback?.(this.stageIndex);
+    this.close();
   }
+
+  /**
+   * @abstract Subclasses write their results into the shared CharGen data object here.
+   */
+  async updateData(event, formData) { }
 
   async validate() {
-
-    let valid = !this.options.cannotResubmit || !this.options.isCompleted 
-    if (!valid)
-    {
-      this.showError("StageAlreadySubmitted")
+    let valid = !this.constructor.cannotResubmit || !this.isCompleted;
+    if (!valid) {
+      this.showError("StageAlreadySubmitted");
     }
-    return valid
+    return valid;
   }
 
-  showError(key, args)
-  {
-    ui.notifications.error(game.i18n.format("CHARGEN.ERROR." + key, args))
+  showError(key, args) {
+    ui.notifications.error(game.i18n.format("CHARGEN.ERROR." + key, args));
   }
 
-
-  updateMessage(key, args={}, string = null)
-  {
-    args.user = game.user.name
-    if (this.options.message)
-    {
-      let content = this.options.message.content
+  updateMessage(key, args = {}, string = null) {
+    args.user = game.user.name;
+    if (this.message) {
+      let content = this.message.content;
 
       if (string)
-        content += string
+        content += string;
       else
-        content += game.i18n.format("CHARGEN.Message." + key, args)
+        content += game.i18n.format("CHARGEN.Message." + key, args);
 
-     return this.options.message.update({content})
+      return this.message.update({ content });
     }
-
   }
 
-
-
-  // HTML to add to the char gen application
+  // HTML to add to the char gen application summary
   async addToDisplay() {
-    return null
+    return null;
   }
 
-  static stageData() 
-  {
+  static stageData() {
     return {
       class: this,
       key: "stage",
@@ -104,45 +119,22 @@ export class ChargenStage extends FormApplication {
       dependantOn: [],
       app: null,
       complete: false
+    };
+  }
+
+  async renderJournalPage() {
+    let journalPage = await fromUuid(this.journalId);
+
+    if (journalPage) {
+      await journalPage.parent.sheet.render(true);
+      journalPage.parent.sheet.goToPage(journalPage.id);
     }
   }
 
-  _updateObject(event, formData) {
-    this.options.complete(this.options.index);
-  }
-
-   async _onSubmit(...args) {
-    args[0].preventDefault();
-    if (await this.validate())
-    {
-      this.options.isCompleted = true;
-      super._onSubmit(...args)
-    }
-  }
-
-  activateListeners(html) {
-    super.activateListeners(html);
-    html.on("click", '.chargen-button, .chargen-button-nostyle', this.onButtonClick.bind(this));
-    html.on("click", '.item-lookup', this._onItemLookupClicked.bind(this));
-
-    // Autoselect entire text 
-    html.find("input").on("focusin", ev => {
-      ev.target.select();
-    });
-  }
-
-
-  onButtonClick(ev) {
-    let type = ev.currentTarget.dataset.button;
-    if (typeof this[type] == "function") {
-      this[type](ev);
-    }
-  }
-
-  async _onItemLookupClicked(ev) {
-    let itemType = $(ev.currentTarget).attr("data-type");
-    let openMethod = $(ev.currentTarget).attr("data-open") || "sheet"; // post or sheet
-    let name = $(ev.currentTarget).attr("data-name") || ev.currentTarget.text; // Use name attribute if available, otherwis, use text clicked.
+  static async _onItemLookup(ev, target) {
+    let itemType = target.dataset.type;
+    let openMethod = target.dataset.open || "sheet"; // post or sheet
+    let name = target.dataset.name || target.textContent.trim(); // Use name attribute if available, otherwise use text clicked.
     let item;
     if (name)
       item = await WFRP_Utility.find(name, itemType);
@@ -150,12 +142,17 @@ export class ChargenStage extends FormApplication {
     if (item) {
       if (openMethod == "sheet")
         item.sheet.render(true);
-
       else
         item.postItem();
     }
   }
 
+  async _onRender(context, options) {
+    await super._onRender(context, options);
 
-
+    // Autoselect entire text when focusing an input
+    this.element.querySelectorAll("input").forEach(el => {
+      el.addEventListener("focusin", ev => ev.target.select());
+    });
+  }
 }
