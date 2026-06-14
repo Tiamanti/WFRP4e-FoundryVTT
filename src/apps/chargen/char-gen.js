@@ -6,13 +6,13 @@ import { SkillsTalentsStage } from "./skills-talents";
 import { TrappingStage } from "./trappings";
 import { DetailsStage } from "./details";
 
-
 /**
  * This class is the center of character generation through the chat prompts (started with /char)
+ * Migrated from V1 FormApplication to ApplicationV2.
  */
-export default class CharGenWfrp4e extends FormApplication {
+export default class CharGenWfrp4e extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(existing={}, options) {
-    super(null, options);
+    super(options);
     this.data = existing?.data || {
       species: null,
       subspecies: null,
@@ -139,21 +139,39 @@ export default class CharGenWfrp4e extends FormApplication {
   }
 
 
-  static get defaultOptions() {
-    const options = super.defaultOptions;
-    options.id = "chargen";
-    options.template = "systems/wfrp4e/templates/apps/chargen/chargen.hbs"
-    options.classes = options.classes.concat("wfrp4e", "chargen");
-    options.resizable = true;
-    options.width = 1000;
-    options.height = 600;
-    options.minimizable = true;
-    options.title = game.i18n.localize("CHARGEN.Title")
-    return options;
-  }
+  static DEFAULT_OPTIONS = {
+    id: "chargen",
+    tag: "form",
+    classes: ["wfrp4e", "chargen"],
+    window: {
+      title: "CHARGEN.Title",
+      resizable: true,
+      minimizable: true
+    },
+    position: {
+      width: 1000,
+      height: 600
+    },
+    form: {
+      handler: this._onSubmitForm,
+      submitOnChange: false,
+      closeOnSubmit: true
+    },
+    actions: {
+      openStage: this._onOpenStage
+    }
+  };
+
+  static PARTS = {
+    form: {
+      template: "systems/wfrp4e/templates/apps/chargen/chargen.hbs",
+      scrollable: [".chargen-data"]
+    }
+  };
 
 
-  async getData() {
+  async _prepareContext(options) {
+    let context = await super._prepareContext(options);
 
     let skills = []
 
@@ -215,7 +233,7 @@ export default class CharGenWfrp4e extends FormApplication {
       stage.title ??= stage.class.title;
     })
 
-    return {
+    return foundry.utils.mergeObject(context, {
       characteristics,
       speciesDisplay : this.data.subspecies ? `${game.wfrp4e.config.species[this.data.species]} (${game.wfrp4e.config.subspecies[this.data.species]?.[this.data.subspecies].name})` :  game.wfrp4e.config.species[this.data.species],
       stages: this.stages,
@@ -225,7 +243,7 @@ export default class CharGenWfrp4e extends FormApplication {
       talents : this.data.items.talents?.map(i => i.name).join(", "),
       trappings : this.data.items.trappings?.map(i => i.name).join(", "),
       exp
-    }
+    });
   }
 
   static async start()
@@ -255,7 +273,7 @@ export default class CharGenWfrp4e extends FormApplication {
     return html.filter(i => i).join("")
   }
 
-  async _updateObject(ev, formData)
+  static async _onSubmitForm(event, form, formData)
   {
     try {
 
@@ -405,7 +423,9 @@ export default class CharGenWfrp4e extends FormApplication {
   complete(stageIndex) {
     this.stages[stageIndex].complete = true;
     Hooks.call("wfrp4e:chargenStageCompleted", this, this.stages[stageIndex]);
-    localStorage.setItem("wfrp4e-chargen", JSON.stringify({data : this.data, stages : this.stages}));
+    // Only persist serializable stage state (the `app` reference is a live Application instance)
+    let stages = this.stages.map(s => ({ key : s.key, complete : s.complete }));
+    localStorage.setItem("wfrp4e-chargen", JSON.stringify({data : this.data, stages}));
     this.render(true);
   }
 
@@ -443,30 +463,27 @@ export default class CharGenWfrp4e extends FormApplication {
   }
 
 
-  activateListeners(html) {
-    super.activateListeners(html);
+  static _onOpenStage(ev, target) {
+    let index = Number(target.dataset.stage);
+    let stage = this.stages[index];
 
-    html.find(".chargen-button").on("click", ev => {
-      let stage = this.stages[Number(ev.currentTarget.dataset.stage)]
+    if (!this.canStartStage(stage))
+    {
+      return ui.notifications.error(game.i18n.format("CHARGEN.ERROR.StageStart", {stage : stage.dependantOn.toString()}))
+    }
 
-      if (!this.canStartStage(stage))
-      {
-        return ui.notifications.error(game.i18n.format("CHARGEN.ERROR.StageStart", {stage : stage.dependantOn.toString()}))
-      }
-
-      if (stage.app)
-        stage.app.render(true)
-      else {
-        stage.app = new stage.class(
-          this.data,
-          {
-            complete : this.complete.bind(this), // Function used by the stage to complete itself
-            index : Number(ev.currentTarget.dataset.stage),
-            message : this.message
-          })
-        stage.app.render(true)
-      }
-    })
+    if (stage.app)
+      stage.app.render(true)
+    else {
+      stage.app = new stage.class(
+        this.data,
+        {
+          complete : this.complete.bind(this), // Function used by the stage to complete itself
+          index,
+          message : this.message
+        })
+      stage.app.render(true)
+    }
   }
 }
 

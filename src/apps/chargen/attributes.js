@@ -5,26 +5,39 @@ const Step = {NOT_STARTED : 0, FIRST_ROLL : 1, SWAPPING : 2, REROLL : 3, ALLOCAT
 export class AttributesStage extends ChargenStage {
 
   journalId = "Compendium.wfrp4e-core.journals.JournalEntry.IQ0PgoJihQltCBUU.JournalEntryPage.GaZa9sU4KjKDswMr"
-  static get defaultOptions() {
-  const options = super.defaultOptions;
-    options.resizable = true;
-    options.width = 400;
-    options.height = 785;
-    options.classes.push("career");
-    options.minimizable = true;
-    options.title = game.i18n.localize("CHARGEN.StageAttributes");
-    return options;
-  }
+
+  static DEFAULT_OPTIONS = {
+    classes: ["career"],
+    position: {
+      width: 400,
+      height: 785
+    },
+    window: {
+      title: "CHARGEN.StageAttributes"
+    },
+    actions: {
+      rollAttributes: function (ev) { return this.rollAttributes(ev); },
+      cancel: function (ev) { return this.cancel(ev); },
+      rearrange: function (ev) { return this.rearrange(ev); },
+      reroll: function (ev) { return this.reroll(ev); },
+      allocate: function (ev) { return this.allocate(ev); }
+    }
+  };
+
+  static PARTS = {
+    form: {
+      template: "systems/wfrp4e/templates/apps/chargen/attributes.hbs",
+      scrollable: [".chargen-content"]
+    }
+  };
 
   static get title() { return game.i18n.localize("CHARGEN.StageAttributes"); }
-  get template() { return "systems/wfrp4e/templates/apps/chargen/attributes.hbs"; }
-
 
 
   constructor(...args) {
     super(...args);
 
-    // Step 1: First roll, Step 2: Swapping, Step 3: Reroll, Step 4: Allocating 
+    // Step 1: First roll, Step 2: Swapping, Step 3: Reroll, Step 4: Allocating
     this.context.step = Step.NOT_STARTED;
     this.context.characteristics = {
       ws: { formula: "", roll: 0, add: 0, total: 0, allocated: 0, advances: 0 },
@@ -52,8 +65,8 @@ export class AttributesStage extends ChargenStage {
     this.context.exp = 50;
   }
 
-  async getData() {
-    let data = await super.getData();
+  async _prepareContext(options) {
+    let context = await super._prepareContext(options);
     this.calculateTotals();
 
     if (this.context.step <= Step.FIRST_ROLL) {
@@ -66,7 +79,7 @@ export class AttributesStage extends ChargenStage {
     else
       this.context.exp = 0;
 
-    return data;
+    return context;
   }
 
   async rollAttributes(ev, step) {
@@ -192,8 +205,8 @@ export class AttributesStage extends ChargenStage {
     return valid
   }
 
-  validate() {
-    return super.validate() && this.validateTotals();
+  async validate() {
+    return (await super.validate()) && this.validateTotals();
   }
 
   swap(ch1, ch2) {
@@ -209,46 +222,6 @@ export class AttributesStage extends ChargenStage {
     this.updateMessage("SwappedCharacteristics", {ch1 : game.wfrp4e.config.characteristics[ch1], ch2: game.wfrp4e.config.characteristics[ch2]})
 
     this.render(true);
-  }
-
-  activateListeners(html) {
-    super.activateListeners(html);
-    const dragDrop = new foundry.applications.ux.DragDrop.implementation({
-      dragSelector: '.ch-drag',
-      dropSelector: '.ch-drag',
-      permissions: { dragstart: () => true, drop: () => true },
-      callbacks: { drop: this.onDropCharacteristic.bind(this), dragstart: this.onDragCharacteristic.bind(this) },
-    });
-
-    dragDrop.bind(html[0]);
-
-
-    html.find(".meta input").on("change", (ev) => {
-      // Bind value to be nonnegative
-      ev.currentTarget.value = Math.max(0, Number(ev.currentTarget.value))
-      this.context.meta[ev.currentTarget.dataset.meta].allotted = Number(ev.currentTarget.value);
-      this.render(true);
-    });
-
-    html.find(".ch-allocate").on("change", (ev) => {
-      // Bind value to be nonnegative
-      ev.currentTarget.value = Math.max(0, Number(ev.currentTarget.value))
-      if (ev.currentTarget.value > 18 || ev.currentTarget.value < 4)
-      {
-        this.showError("CharacteristicAllocationBounds")
-        ev.currentTarget.value = 0
-        return 
-      }
-      this.context.characteristics[ev.currentTarget.dataset.ch].allocated = Number(ev.currentTarget.value);
-      this.render(true);
-    });
-
-    html.find(".ch-advance").on("change", ev => {
-      // Bind value to be nonnegative
-      ev.currentTarget.value = Math.max(0, Number(ev.currentTarget.value))
-      this.context.characteristics[ev.currentTarget.dataset.ch].advances = Number(ev.currentTarget.value);
-      this.render(true);
-    });
   }
 
   reroll(ev) {
@@ -275,13 +248,13 @@ export class AttributesStage extends ChargenStage {
   {
     if (this.context.hasRerolled)
     this.context.step = Step.REROLL
-    else 
+    else
       this.context.step = Step.FIRST_ROLL
     this.context.characteristics = foundry.utils.duplicate(this.context.rolledCharacteristics)
     this.render(true)
   }
 
-  _updateObject(ev, formData) {
+  async updateData(ev, formData) {
     for (let ch in this.context.characteristics) {
       this.data.characteristics[ch] = { initial: this.context.characteristics[ch].initial, advances: this.context.characteristics[ch].advances };
     }
@@ -291,7 +264,6 @@ export class AttributesStage extends ChargenStage {
     this.data.resilience.allotted = this.context.meta.resilience.allotted;
     this.data.move = game.wfrp4e.config.speciesMovement[this.data.species];
     this.data.exp.characteristics = this.context.exp;
-    super._updateObject(ev, formData)
   }
 
   onDragCharacteristic(ev) {
@@ -303,5 +275,45 @@ export class AttributesStage extends ChargenStage {
       let ch = JSON.parse(ev.dataTransfer.getData("text/plain")).ch;
       this.swap(ev.currentTarget.dataset.ch, ch);
     }
+  }
+
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    const dragDrop = new foundry.applications.ux.DragDrop.implementation({
+      dragSelector: '.ch-drag',
+      dropSelector: '.ch-drag',
+      permissions: { dragstart: () => true, drop: () => true },
+      callbacks: { drop: this.onDropCharacteristic.bind(this), dragstart: this.onDragCharacteristic.bind(this) },
+    });
+
+    dragDrop.bind(this.element);
+
+
+    this.element.querySelectorAll(".meta input").forEach(el => el.addEventListener("change", (ev) => {
+      // Bind value to be nonnegative
+      ev.currentTarget.value = Math.max(0, Number(ev.currentTarget.value))
+      this.context.meta[ev.currentTarget.dataset.meta].allotted = Number(ev.currentTarget.value);
+      this.render(true);
+    }));
+
+    this.element.querySelectorAll(".ch-allocate").forEach(el => el.addEventListener("change", (ev) => {
+      // Bind value to be nonnegative
+      ev.currentTarget.value = Math.max(0, Number(ev.currentTarget.value))
+      if (ev.currentTarget.value > 18 || ev.currentTarget.value < 4)
+      {
+        this.showError("CharacteristicAllocationBounds")
+        ev.currentTarget.value = 0
+        return
+      }
+      this.context.characteristics[ev.currentTarget.dataset.ch].allocated = Number(ev.currentTarget.value);
+      this.render(true);
+    }));
+
+    this.element.querySelectorAll(".ch-advance").forEach(el => el.addEventListener("change", ev => {
+      // Bind value to be nonnegative
+      ev.currentTarget.value = Math.max(0, Number(ev.currentTarget.value))
+      this.context.characteristics[ev.currentTarget.dataset.ch].advances = Number(ev.currentTarget.value);
+      this.render(true);
+    }));
   }
 }

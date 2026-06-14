@@ -1,4 +1,4 @@
-<form>
+<div class="chargen-stage flexcol">
   <div class="stage-title">
     <p>{{localize "CHARGEN.StageTitle.Trappings"}}</p>
   </div>
@@ -46,14 +46,14 @@
     <div>
       {{#each context.added as |trapping index|}}
       <a class="content-link" draggable="true" data-uuid="{{trapping.uuid}}"><i class="fas fa-suitcase"></i>{{trapping.name}}</a>
-      <a class="remove-trapping" data-index="{{index}}"><i class="fa-solid fa-times"></i></a>
+      <a class="remove-trapping" data-action="removeTrapping" data-index="{{index}}"><i class="fa-solid fa-times"></i></a>
       {{/each}}
     </div>
   <p class="centered">{{localize "CHARGEN.Trappings.DragDrop"}}</p>
 
 
   {{#unless context.income.item}}
-    <a class='chargen-button' style="width: 200px; margin:0px auto" data-button='onRollIncome'>{{localize "CHARGEN.Trappings.RollIncome"}}</a>
+    <a class='chargen-button' style="width: 200px; margin:0px auto" data-action='rollIncome'>{{localize "CHARGEN.Trappings.RollIncome"}}</a>
     {{else}}
     <div style="display: flex; align-items: center; justify-content: center">
     <img width="40" height="40" src="{{context.income.item.img}}">
@@ -67,4 +67,4 @@
   <div class="controls">
     <button type="submit">{{localize "Submit"}}</button>
   </div>
-  </form>
+</div>

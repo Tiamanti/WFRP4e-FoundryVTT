@@ -3,54 +3,42 @@ import { ChargenStage } from "./stage";
 
 export class DetailsStage extends ChargenStage {
   journalId = "Compendium.wfrp4e-core.journals.JournalEntry.IQ0PgoJihQltCBUU.JournalEntryPage.Q4C9uANCqPzlRKFD"
-  static get defaultOptions() {
-    const options = super.defaultOptions;
-    options.resizable = true;
-    options.width = 500;
-    options.height = 700;
-    options.classes.push("details");
-    options.minimizable = true;
-    options.title = game.i18n.localize("CHARGEN.StageDetails");
-    return options;
-  }
+
+  static DEFAULT_OPTIONS = {
+    classes: ["details"],
+    position: {
+      width: 500,
+      height: 700
+    },
+    window: {
+      title: "CHARGEN.StageDetails"
+    },
+    actions: {
+      rollDetail: async function (ev, target) {
+        let type = target.dataset.type;
+        if (this[type]) {
+          let value = await this[type]();
+          let input = target.closest(".detail-form").querySelector("input");
+          input.value = value;
+        }
+      }
+    }
+  };
+
+  static PARTS = {
+    form: {
+      template: "systems/wfrp4e/templates/apps/chargen/details.hbs",
+      scrollable: [".chargen-content"]
+    }
+  };
 
   static get title() { return game.i18n.localize("CHARGEN.StageDetails"); }
 
-  get template() {
-    return "systems/wfrp4e/templates/apps/chargen/details.hbs";
-  }
-
-  constructor(...args) {
-    super(...args);
-  }
   context = {
     gender: ""
   };
 
-
-  async getData() {
-    let data = await super.getData();
-    return data;
-  }
-
-  activateListeners(html) {
-    super.activateListeners(html);
-
-    html.find(".roll-details").click(async (ev) => {
-      let type = ev.currentTarget.dataset.type;
-      if (this[type]) {
-        let value = await this[type]();
-        let input = $(ev.target).parents(".detail-form").find("input")[0];
-        input.value = value;
-      }
-    });
-
-    html.find("input[name='gender']").change(ev => {
-      this.context.gender = ev.currentTarget.value; // Need to store gender to pass to name generation
-    });
-  }
-
-  _updateObject(ev, formData) {
+  async updateData(ev, formData) {
     this.data.details.name = formData.name;
     this.data.details.gender = formData.gender;
     this.data.details.age = formData.age;
@@ -60,7 +48,15 @@ export class DetailsStage extends ChargenStage {
     this.data.details.motivation = formData.motivation;
     this.data.details.short = formData.short;
     this.data.details.long = formData.long;
-    super._updateObject(ev, formData)
+  }
+
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+
+    // Need to store gender to pass to name generation
+    this.element.querySelector("input[name='gender']")?.addEventListener("change", ev => {
+      this.context.gender = ev.currentTarget.value;
+    });
   }
 
   rollName() {

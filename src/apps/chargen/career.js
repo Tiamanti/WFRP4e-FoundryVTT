@@ -2,16 +2,28 @@ import { ChargenStage } from "./stage";
 
 export class CareerStage extends ChargenStage {
   journalId = "Compendium.wfrp4e-core.journals.JournalEntry.IQ0PgoJihQltCBUU.JournalEntryPage.bS2sxusEp1FEqmRk"
-  static get defaultOptions() {
-    const options = super.defaultOptions;
-    options.resizable = true;
-    options.width = 400;
-    options.height = 670;
-    options.classes.push("career");
-    options.minimizable = true;
-    options.title = game.i18n.localize("CHARGEN.StageCareer");
-    return options;
-  }
+
+  static DEFAULT_OPTIONS = {
+    classes: ["career"],
+    position: {
+      width: 400,
+      height: 670
+    },
+    window: {
+      title: "CHARGEN.StageCareer"
+    },
+    actions: {
+      rollCareer: function (ev) { return this.onRollCareer(ev); },
+      selectCareer: function (ev, target) { return this.onSelectCareer(ev, target); }
+    }
+  };
+
+  static PARTS = {
+    form: {
+      template: "systems/wfrp4e/templates/apps/chargen/career.hbs",
+      scrollable: [".chargen-content"]
+    }
+  };
 
   static get title() { return game.i18n.localize("CHARGEN.StageCareer"); }
 
@@ -23,11 +35,6 @@ export class CareerStage extends ChargenStage {
     this.context.replacements = [];
     this.context.career = null;
     this.context.exp = 0;
-  }
-
-
-  get template() {
-    return "systems/wfrp4e/templates/apps/chargen/career.hbs";
   }
 
 
@@ -54,35 +61,33 @@ export class CareerStage extends ChargenStage {
   }
 
   // Career selected, move on to the next step
-  async onSelectCareer(ev) {
-    let careerItem = await this.findT1Careers(ev.currentTarget.dataset.career);
+  async onSelectCareer(ev, target) {
+    let careerItem = await this.findT1Careers(target.dataset.career);
     if (careerItem) {
       this.context.career = careerItem[0];
       this.updateMessage("Chosen", {chosen : this.context.career.name})
 
     }
     else {
-      throw new Error(gam.i18n.format("CHARGEN.ERROR.CareerItem", {career : ev.currentTarget.dataset.career}));
+      throw new Error(game.i18n.format("CHARGEN.ERROR.CareerItem", {career : target.dataset.career}));
     }
     this.render(true);
   }
 
-  _updateObject(event, formData) {
+  async updateData(event, formData) {
     this.data.items.career = this.context.career.toObject();
     this.data.exp.career = this.context.exp;
 
     this.data.items.career.system.current.value = true;
-    super._updateObject(event, formData)
-
   }
 
-  async getData() {
-    let data = await super.getData();
+  async _prepareContext(options) {
+    let context = await super._prepareContext(options);
     for (let c of this.context.careers.concat(this.context.replacements)) {
       c.enriched = await foundry.applications.ux.TextEditor.implementation.enrichHTML(c.system.description.value, { async: true });
     }
-    data.showChooseButton = this.context.replacements.length + this.context.careers.length > 1
-    return data
+    context.showChooseButton = this.context.replacements.length + this.context.careers.length > 1
+    return context
   }
 
 
@@ -113,7 +118,7 @@ export class CareerStage extends ChargenStage {
   }
 
   async validate() {
-    let valid = super.validate()
+    let valid = await super.validate()
     if (!this.context.career)
     {
       this.showError("CareerSubmit")
@@ -132,7 +137,7 @@ export class CareerStage extends ChargenStage {
     // If subspecies table is found, use that
     else if (this.data.subspecies && game.wfrp4e.tables.findTable("career", rollSpecies + "-" + this.data.subspecies))
       rollSpecies += "-" + this.data.subspecies;
-    
+
 
     // If Human (no subspecies) and no "human" career table exists, use `human-reiklander` if it exists
     // This is backwards compatibility (human-reiklander table changed to just human)
@@ -151,7 +156,7 @@ export class CareerStage extends ChargenStage {
       replacementOptions = replacementOptions.concat(game.wfrp4e.config.speciesCareerReplacements[`${this.data.species}-${this.data.subspecies}`]?.[careerName] || [])
 
       let t1Careers = await this.findT1Careers(careerName)
-      
+
       this.context.careers = this.context.careers.concat(t1Careers);
       if (replacementOptions.length > 0)
       {
@@ -167,9 +172,9 @@ export class CareerStage extends ChargenStage {
   /**
    * Rolls on a career table based on provided species
    * Separated into its own function to cleanly overwrite in modules
-   * 
+   *
    * @param {String} species Species table to roll on
-   * @returns 
+   * @returns
    */
   async rollCareerTable(species)
   {
@@ -186,7 +191,7 @@ export class CareerStage extends ChargenStage {
 
     let careers = await this.careers
     let careersFound = [];
-    
+
     if (typeof careerNames == "string")
       careerNames = [careerNames];
 
@@ -220,15 +225,15 @@ export class CareerStage extends ChargenStage {
     return careers;
   }
 
-  
-  activateListeners(html) {
-    super.activateListeners(html);
+
+  async _onRender(context, options) {
+    await super._onRender(context, options);
     const dragDrop = new foundry.applications.ux.DragDrop.implementation({
       dropSelector: '.chargen-content',
       permissions: { drop: () => true },
       callbacks: { drop: this._onDrop.bind(this) },
     });
 
-    dragDrop.bind(html[0]);
+    dragDrop.bind(this.element);
   }
 }

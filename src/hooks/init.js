@@ -483,7 +483,8 @@ export default function() {
       vehicleArmour: "systems/wfrp4e/templates/sheets/partials/vehicle-armour.hbs",
       itemProperties: "systems/wfrp4e/templates/sheets/partials/item-properties.hbs",
       extraOvercast: "systems/wfrp4e/templates/sheets/partials/extra-overcast.hbs",
-      "chargen.species.preview": 'systems/wfrp4e/templates/apps/chargen/partials/species-preview.hbs'
+      "chargen.species.preview.characteristics": 'systems/wfrp4e/templates/apps/chargen/partials/species-preview-characteristics.hbs',
+      "chargen.species.preview.skills": 'systems/wfrp4e/templates/apps/chargen/partials/species-preview-skills.hbs'
     });
 
     // Load name construction from files
