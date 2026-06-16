@@ -1,12 +1,6 @@
 @use "../mixins/button" as *;
 @use "../theme/mixins" as *;
 
-#chargen-stage.app.window-app .window-content,
-#chargen.app.window-app .window-content {
-  background: url(./ui/backgrounds/parchment-texture.webp) repeat;
-  font-family: CaslonPro;
-}
-
 .chargen button {
   @include wfrp-button;
   color: white;
