@@ -164,10 +164,17 @@ export class SpeciesStage extends ChargenStage {
 
   async _onRender(context, options) {
     await super._onRender(context, options);
-    // Single Species column before selection; expand to four columns after
-    let targetWidth = this.context.species ? 1000 : 340;
+    // Single Species column before selection; expand to four columns after.
+    // The Characteristics column appears to the LEFT of the Species column, so
+    // shift the window left by its width when expanding (and back on collapse)
+    // to keep the Species column roughly in place.
+    const expandedWidth = 1000;
+    const collapsedWidth = 340;
+    const leftShift = 216; // Characteristics column (200px) + padding
+    let targetWidth = this.context.species ? expandedWidth : collapsedWidth;
     if (this.position.width !== targetWidth) {
-      this.setPosition({ width: targetWidth });
+      let left = this.position.left + (targetWidth === expandedWidth ? -leftShift : leftShift);
+      this.setPosition({ width: targetWidth, left });
     }
   }
 }
