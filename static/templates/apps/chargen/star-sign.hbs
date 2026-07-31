@@ -1,0 +1,40 @@
+<div class="chargen-stage flexcol">
+    <div class="stage-title">
+        <p class="subtitle">{{localize "CHARGEN.StageTitle.StarSign"}}</p>
+    </div>
+
+    <div class="chargen-content">
+        {{#if (eq context.step 0)}}
+        <div class="buttons">
+            <a class="chargen-button" data-action="rollStarSign">{{localize "Roll"}}</a>
+        </div>
+        {{/if}}
+
+        <div class="chargen-items">
+            {{#if context.sign}}
+            <div class="flexcol">
+                <h4>{{context.sign.name}}</h4>
+                <img src="{{context.sign.img}}" alt="{{context.sign.name}}">
+                {{{signDescription}}}
+            </div>
+            {{/if}}
+        </div>
+
+        {{#if (gt context.step 0)}}
+        <p class="centered">{{localize "CHARGEN.StarSign.Choose"}}</p>
+        <select class="choose-sign">
+            {{#each context.signs as |sign|}}
+            <option value="{{sign.id}}"{{#if (eq sign.id ../context.sign.id)}} selected{{/if}}>{{sign.name}}</option>
+            {{/each}}
+        </select>
+        {{/if}}
+    </div>
+
+    <div class="result">
+        <span><b>{{localize "CHARGEN.StageStarSigns"}}</b>: {{context.sign.name}}</span>
+        <span class="xp">{{localize "XP"}}: {{context.exp}}</span>
+    </div>
+    <div class="controls">
+        <button type="submit">{{localize "Submit"}}</button>
+    </div>
+</div>

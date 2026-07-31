@@ -5,6 +5,7 @@ import { AttributesStage } from "./attributes";
 import { SkillsTalentsStage } from "./skills-talents";
 import { TrappingStage } from "./trappings";
 import { DetailsStage } from "./details";
+import { StarSignStage } from "./star-sign";
 
 /**
  * This class is the center of character generation through the chat prompts (started with /char)
@@ -101,6 +102,10 @@ export default class CharGenWfrp4e extends HandlebarsApplicationMixin(Applicatio
         complete: false
       }
     ]
+
+    if (game.modules.get("wfrp4e-archives2")?.active) {
+      this.addStage(StarSignStage, 3);
+    }
 
     // If using existing data, record which stages were already complete
     if (existing?.stages)
@@ -442,6 +447,8 @@ export default class CharGenWfrp4e extends HandlebarsApplicationMixin(Applicatio
   addStage(stage, index, stageData = {}) {
     let stageObj = stage.stageData();
     stageObj = foundry.utils.mergeObject(stageObj, stageData);
+
+    if (this.stages.find(s => s.key === stageObj.key)) return;
 
     if (index === undefined) {
       this.stages.push(stageObj)
