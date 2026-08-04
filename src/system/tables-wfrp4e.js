@@ -101,7 +101,7 @@ export default class WFRP_Tables {
       let rollResult = table.getResultsForRoll(rollValue)[0]
       let flags = rollResult?.flags?.wfrp4e || {}
       let result = {
-        result : rollResult?.getChatText(),
+        result : rollResult ? (rollResult.type === "document" ? `@UUID[${rollResult.documentUuid}]{${rollResult.name}}` : rollResult.description) : undefined,
         roll : displayTotal,
         total : rollValue,
         name : rollResult?.name,
