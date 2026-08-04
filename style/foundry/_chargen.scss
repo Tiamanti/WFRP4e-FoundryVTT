@@ -15,9 +15,6 @@
   text-align: center;
 }
 
-// Foundry core never gives radio inputs an explicit size (unlike checkboxes),
-// so appearance:none leaves them with no intrinsic box - stretched to 0 height
-// in the chargen's flex-column layouts.
 .chargen input[type="radio"] {
   width: 1.25rem;
   height: 1.25rem;
@@ -25,10 +22,6 @@
   align-self: center;
 }
 
-// A radio group with no option chosen yet CSS-matches :indeterminate (per
-// spec), which core styles with a transparent ::before - fine for a genuine
-// tri-state checkbox, but it makes chargen's unselected radios invisible
-// until any option in the group is picked. Restore the normal unchecked look.
 .chargen input[type="radio"]:indeterminate::before {
   font-family: var(--font-awesome);
   color: var(--checkbox-background-color);
